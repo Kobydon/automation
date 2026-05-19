@@ -13,7 +13,7 @@ VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
 
 # =========================
-# SEND MESSAGE FUNCTION
+# SEND TEXT MESSAGE
 # =========================
 def send_message(to, text):
     url = f"https://graph.facebook.com/v25.0/{PHONE_NUMBER_ID}/messages"
@@ -23,21 +23,26 @@ def send_message(to, text):
         "Content-Type": "application/json"
     }
 
-    data = {
+    payload = {
         "messaging_product": "whatsapp",
         "to": to,
         "type": "text",
         "text": {"body": text}
     }
 
-    return requests.post(url, json=data, headers=headers).json()
+    response = requests.post(url, json=payload, headers=headers)
+
+    print("📤 STATUS:", response.status_code)
+    print("📤 RESPONSE:", response.text)
+
+    return response.json()
 
 
 # =========================
-# WEBHOOK VERIFY (META CHECK)
+# WEBHOOK VERIFY
 # =========================
 @app.route("/webhook", methods=["GET"])
-def verify_webhook():
+def verify():
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
@@ -49,43 +54,35 @@ def verify_webhook():
 
 
 # =========================
-# RECEIVE MESSAGES (MAIN BOT LOGIC)
+# RECEIVE MESSAGES
 # =========================
 @app.route("/webhook", methods=["POST"])
-def receive_message():
+def webhook():
     data = request.get_json()
 
-    # 🔥 DEBUG: always show incoming payload
-    print("\n🔥 WEBHOOK RECEIVED:")
+    print("\n🔥 INCOMING WEBHOOK:")
     print(data)
 
     try:
-        if not data:
-            return "OK", 200
-
-        entry = data.get("entry", [{}])[0]
-        changes = entry.get("changes", [{}])[0]
+        entry = data.get("entry", [])[0]
+        changes = entry.get("changes", [])[0]
         value = changes.get("value", {})
 
         messages = value.get("messages")
 
         if messages:
-            message = messages[0]
+            msg = messages[0]
 
-            sender = message.get("from")
+            sender = msg.get("from")
+            msg_type = msg.get("type")
 
-            msg_type = message.get("type")
             text = ""
 
-            # ✅ safe text extraction
             if msg_type == "text":
-                text = message.get("text", {}).get("body", "").lower()
+                text = msg.get("text", {}).get("body", "").lower()
 
-            print("📩 Incoming text:", text)
+            print("📩 MESSAGE:", text)
 
-            # =========================
-            # BOT LOGIC
-            # =========================
             if "hi" in text:
                 send_message(sender, "How are you? 😊")
 
@@ -93,20 +90,20 @@ def receive_message():
                 send_message(sender, "Hello there! 👋")
 
             else:
-                send_message(sender, "I didn't understand that 🤖")
+                send_message(sender, "I didn't understand 🤖")
 
     except Exception as e:
         print("❌ ERROR:", str(e))
 
-    return jsonify({"status": "received"}), 200
+    return jsonify({"status": "ok"}), 200
 
 
 # =========================
-# TEST ROUTE
+# HOME
 # =========================
 @app.route("/")
 def home():
-    return "WhatsApp Bot is running 🚀"
+    return "WhatsApp Bot Running 🚀"
 
 
 if __name__ == "__main__":
