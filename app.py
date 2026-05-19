@@ -30,12 +30,8 @@ def send_message(to, text):
         "text": {"body": text}
     }
 
-    response = requests.post(url, json=data, headers=headers)
+    return requests.post(url, json=data, headers=headers).json()
 
-    print("📤 SEND STATUS:", response.status_code)
-    print("📤 SEND RESPONSE:", response.json())
-
-    return response.json()
 
 # =========================
 # WEBHOOK VERIFY (META CHECK)
