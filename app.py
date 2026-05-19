@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")  # for webhook verification
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
 
 # =========================
@@ -27,9 +27,7 @@ def send_message(to, text):
         "messaging_product": "whatsapp",
         "to": to,
         "type": "text",
-        "text": {
-            "body": text
-        }
+        "text": {"body": text}
     }
 
     return requests.post(url, json=data, headers=headers).json()
@@ -57,18 +55,33 @@ def verify_webhook():
 def receive_message():
     data = request.get_json()
 
+    # 🔥 DEBUG: always show incoming payload
+    print("\n🔥 WEBHOOK RECEIVED:")
+    print(data)
+
     try:
-        entry = data["entry"][0]
-        changes = entry["changes"][0]
-        value = changes["value"]
+        if not data:
+            return "OK", 200
 
-        if "messages" in value:
-            message = value["messages"][0]
+        entry = data.get("entry", [{}])[0]
+        changes = entry.get("changes", [{}])[0]
+        value = changes.get("value", {})
 
-            sender = message["from"]
-            text = message["text"]["body"].lower()
+        messages = value.get("messages")
 
-            print("Incoming:", text)
+        if messages:
+            message = messages[0]
+
+            sender = message.get("from")
+
+            msg_type = message.get("type")
+            text = ""
+
+            # ✅ safe text extraction
+            if msg_type == "text":
+                text = message.get("text", {}).get("body", "").lower()
+
+            print("📩 Incoming text:", text)
 
             # =========================
             # BOT LOGIC
@@ -83,7 +96,7 @@ def receive_message():
                 send_message(sender, "I didn't understand that 🤖")
 
     except Exception as e:
-        print("Error:", e)
+        print("❌ ERROR:", str(e))
 
     return jsonify({"status": "received"}), 200
 
