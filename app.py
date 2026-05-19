@@ -57,10 +57,35 @@ def verify_webhook():
 def receive_message():
     data = request.get_json()
 
-    print("\n🔥🔥🔥 WEBHOOK HIT CONFIRMED 🔥🔥🔥")
-    print(data)
+    try:
+        entry = data["entry"][0]
+        changes = entry["changes"][0]
+        value = changes["value"]
 
-    return "OK", 200
+        if "messages" in value:
+            message = value["messages"][0]
+
+            sender = message["from"]
+            text = message["text"]["body"].lower()
+
+            print("Incoming:", text)
+
+            # =========================
+            # BOT LOGIC
+            # =========================
+            if "hi" in text:
+                send_message(sender, "How are you? 😊")
+
+            elif "hello" in text:
+                send_message(sender, "Hello there! 👋")
+
+            else:
+                send_message(sender, "I didn't understand that 🤖")
+
+    except Exception as e:
+        print("Error:", e)
+
+    return jsonify({"status": "received"}), 200
 
 
 # =========================
